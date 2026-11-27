@@ -1,0 +1,337 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		B10000010000000000000001 /* SinjetHUDToolApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000010000000000000001 /* SinjetHUDToolApp.swift */; };
+		B10000020000000000000001 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000020000000000000001 /* ContentView.swift */; };
+		B10000030000000000000001 /* CarDataModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000030000000000000001 /* CarDataModels.swift */; };
+		B10000040000000000000001 /* ProtocolLog.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000040000000000000001 /* ProtocolLog.swift */; };
+		B10000050000000000000001 /* UpgradeModels.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000050000000000000001 /* UpgradeModels.swift */; };
+		B10000060000000000000001 /* FrameCodec.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000060000000000000001 /* FrameCodec.swift */; };
+		B10000070000000000000001 /* HUDCommands.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000070000000000000001 /* HUDCommands.swift */; };
+		B10000080000000000000001 /* PakValidator.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000080000000000000001 /* PakValidator.swift */; };
+		B10000090000000000000001 /* BLEManager.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000090000000000000001 /* BLEManager.swift */; };
+		B10000100000000000000001 /* HUDStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000100000000000000001 /* HUDStore.swift */; };
+		B10000110000000000000001 /* ConnectionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000110000000000000001 /* ConnectionView.swift */; };
+		B10000120000000000000001 /* CarDataView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000120000000000000001 /* CarDataView.swift */; };
+		B10000130000000000000001 /* HUDControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000130000000000000001 /* HUDControlView.swift */; };
+		B10000140000000000000001 /* FirmwareUpgradeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000140000000000000001 /* FirmwareUpgradeView.swift */; };
+		B10000150000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10000150000000000000001 /* Assets.xcassets */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXFileReference section */
+		F10000000000000000000001 /* SinjetHUDTool.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = SinjetHUDTool.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F10000010000000000000001 /* SinjetHUDToolApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SinjetHUDToolApp.swift; sourceTree = "<group>"; };
+		F10000020000000000000001 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		F10000030000000000000001 /* CarDataModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarDataModels.swift; sourceTree = "<group>"; };
+		F10000040000000000000001 /* ProtocolLog.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProtocolLog.swift; sourceTree = "<group>"; };
+		F10000050000000000000001 /* UpgradeModels.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UpgradeModels.swift; sourceTree = "<group>"; };
+		F10000060000000000000001 /* FrameCodec.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FrameCodec.swift; sourceTree = "<group>"; };
+		F10000070000000000000001 /* HUDCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDCommands.swift; sourceTree = "<group>"; };
+		F10000080000000000000001 /* PakValidator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PakValidator.swift; sourceTree = "<group>"; };
+		F10000090000000000000001 /* BLEManager.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BLEManager.swift; sourceTree = "<group>"; };
+		F10000100000000000000001 /* HUDStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDStore.swift; sourceTree = "<group>"; };
+		F10000110000000000000001 /* ConnectionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectionView.swift; sourceTree = "<group>"; };
+		F10000120000000000000001 /* CarDataView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CarDataView.swift; sourceTree = "<group>"; };
+		F10000130000000000000001 /* HUDControlView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HUDControlView.swift; sourceTree = "<group>"; };
+		F10000140000000000000001 /* FirmwareUpgradeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirmwareUpgradeView.swift; sourceTree = "<group>"; };
+		F10000150000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		F10000160000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		A10000010000000000000001 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		G10000000000000000000001 = {
+			isa = PBXGroup;
+			children = (
+				G10000010000000000000001 /* SinjetHUDTool */,
+				G10000020000000000000001 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		G10000010000000000000001 /* SinjetHUDTool */ = {
+			isa = PBXGroup;
+			children = (
+				G10000030000000000000001 /* App */,
+				G10000040000000000000001 /* Models */,
+				G10000050000000000000001 /* Core */,
+				G10000060000000000000001 /* Views */,
+				F10000150000000000000001 /* Assets.xcassets */,
+				F10000160000000000000001 /* Info.plist */,
+			);
+			path = SinjetHUDTool;
+			sourceTree = "<group>";
+		};
+		G10000020000000000000001 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				F10000000000000000000001 /* SinjetHUDTool.app */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		G10000030000000000000001 /* App */ = {
+			isa = PBXGroup;
+			children = (
+				F10000010000000000000001 /* SinjetHUDToolApp.swift */,
+				F10000020000000000000001 /* ContentView.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		G10000040000000000000001 /* Models */ = {
+			isa = PBXGroup;
+			children = (
+				F10000030000000000000001 /* CarDataModels.swift */,
+				F10000040000000000000001 /* ProtocolLog.swift */,
+				F10000050000000000000001 /* UpgradeModels.swift */,
+			);
+			path = Models;
+			sourceTree = "<group>";
+		};
+		G10000050000000000000001 /* Core */ = {
+			isa = PBXGroup;
+			children = (
+				F10000060000000000000001 /* FrameCodec.swift */,
+				F10000070000000000000001 /* HUDCommands.swift */,
+				F10000080000000000000001 /* PakValidator.swift */,
+				F10000090000000000000001 /* BLEManager.swift */,
+				F10000100000000000000001 /* HUDStore.swift */,
+			);
+			path = Core;
+			sourceTree = "<group>";
+		};
+		G10000060000000000000001 /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				F10000110000000000000001 /* ConnectionView.swift */,
+				F10000120000000000000001 /* CarDataView.swift */,
+				F10000130000000000000001 /* HUDControlView.swift */,
+				F10000140000000000000001 /* FirmwareUpgradeView.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		T10000010000000000000001 /* SinjetHUDTool */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = C10000020000000000000001 /* Build configuration list for PBXNativeTarget "SinjetHUDTool" */;
+			buildPhases = (
+				S10000010000000000000001 /* Sources */,
+				A10000010000000000000001 /* Frameworks */,
+				R10000010000000000000001 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = SinjetHUDTool;
+			productName = SinjetHUDTool;
+			productReference = F10000000000000000000001 /* SinjetHUDTool.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		P10000010000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 1600;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					T10000010000000000000001 = {
+						CreatedOnToolsVersion = 16.0;
+					};
+				};
+			};
+			buildConfigurationList = C10000010000000000000001 /* Build configuration list for PBXProject "SinjetHUDTool" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = zh_CN;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				zh_CN,
+				Base,
+			);
+			mainGroup = G10000000000000000000001;
+			productRefGroup = G10000020000000000000001 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				T10000010000000000000001 /* SinjetHUDTool */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		R10000010000000000000001 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000150000000000000001 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		S10000010000000000000001 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				B10000010000000000000001 /* SinjetHUDToolApp.swift in Sources */,
+				B10000020000000000000001 /* ContentView.swift in Sources */,
+				B10000030000000000000001 /* CarDataModels.swift in Sources */,
+				B10000040000000000000001 /* ProtocolLog.swift in Sources */,
+				B10000050000000000000001 /* UpgradeModels.swift in Sources */,
+				B10000060000000000000001 /* FrameCodec.swift in Sources */,
+				B10000070000000000000001 /* HUDCommands.swift in Sources */,
+				B10000080000000000000001 /* PakValidator.swift in Sources */,
+				B10000090000000000000001 /* BLEManager.swift in Sources */,
+				B10000100000000000000001 /* HUDStore.swift in Sources */,
+				B10000110000000000000001 /* ConnectionView.swift in Sources */,
+				B10000120000000000000001 /* CarDataView.swift in Sources */,
+				B10000130000000000000001 /* HUDControlView.swift in Sources */,
+				B10000140000000000000001 /* FirmwareUpgradeView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		D10000010000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		D10000020000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_REQUIRED = NO;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_NO_COMMON_BLOCKS = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				SDKROOT = iphoneos;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		D10000030000000000000001 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SinjetHUDTool/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sinjet.hudtool;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		D10000040000000000000001 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = arm64;
+				ASSETCATALOG_COMPILER_ACCENT_COLOR_NAME = AccentColor;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_STYLE = Manual;
+				CURRENT_PROJECT_VERSION = 1;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = SinjetHUDTool/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = com.sinjet.hudtool;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SUPPORTED_PLATFORMS = iphoneos;
+				SWIFT_EMIT_LOC_STRINGS = NO;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		C10000010000000000000001 /* Build configuration list for PBXProject "SinjetHUDTool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D10000010000000000000001 /* Debug */,
+				D10000020000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		C10000020000000000000001 /* Build configuration list for PBXNativeTarget "SinjetHUDTool" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				D10000030000000000000001 /* Debug */,
+				D10000040000000000000001 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = P10000010000000000000001 /* Project object */;
+}
