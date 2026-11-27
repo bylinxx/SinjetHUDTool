@@ -620,7 +620,9 @@ final class HUDStore: ObservableObject {
             quickCheck.isCompleted = (msg[1] == 0x01)
             appendLog(.rx, summary: msg[1] == 0x01 ? "快捷车检完成 (03 0F 01)" : "快捷车检进行中 (03 0F 00)", hex: msg.hexSpacedString)
         case 0x10:
-            guard msg.count >= 13,
+            // HUDBACA0 实测整帧 payload 为 13B（含首字节 0x03），剥离 0x03 后 msg 为 12B；
+            // 兼容 12B（无报警标志字节）与 13B（带 msg[12] 报警标志字节）
+            guard msg.count >= 12,
                   let voltRaw = msg.readUInt16BE(at: 1),
                   let rpmRaw = msg.readUInt16BE(at: 3),
                   let milesRaw = msg.readUInt16BE(at: 7),
@@ -629,7 +631,7 @@ final class HUDStore: ObservableObject {
             let rpm = Int(rpmRaw >> 2)
             let coolantByte = msg[6]
             let fuelRaw = msg[11]
-            let alarms = msg[12]
+            let alarms: UInt8 = msg.count >= 13 ? msg[12] : 0
 
             liveMetrics.voltage = Double(voltRaw) / 1000.0
             liveMetrics.rpm = rpm
@@ -638,8 +640,8 @@ final class HUDStore: ObservableObject {
                 liveMetrics.idleRpm = rpm
             }
             liveMetrics.coolantTemp = (coolantByte == 0xFF) ? nil : (Int(coolantByte) - 40)
-            liveMetrics.mileage = Int(milesRaw)
-            liveMetrics.fuelConsumption = Double(oilRaw) / 100.0
+            liveMetrics.mileage = (milesRaw == 0xFFFF) ? nil : Int(milesRaw)
+            liveMetrics.fuelConsumption = (oilRaw == 0xFFFF) ? nil : (Double(oilRaw) / 100.0)
             liveMetrics.fuelLevelPercent = Int((Double(fuelRaw) * 100.0 / 255.0).rounded())
             liveMetrics.voltageAlarmFlag = alarms >> 4
             liveMetrics.coolantAlarmFlag = alarms & 0x0F

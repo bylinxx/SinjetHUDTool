@@ -1,4 +1,5 @@
 import SwiftUI
+import UIKit
 
 struct HUDControlView: View {
     @EnvironmentObject private var store: HUDStore
@@ -54,33 +55,32 @@ struct HUDControlView: View {
                     disabled: !store.connectionState.isConnected,
                     onPressChanged: { pressed in
                         store.setAxelaButtonPressed(.up, pressed: pressed)
-                    },
-                    onTapFallback: {
-                        store.pulseAxelaButton(.up, label: "上-单击")
                     }
                 )
+                .frame(maxWidth: .infinity)
+                .frame(height: 60)
+
                 HoldableHUDButton(
                     title: "OK",
                     systemImage: "checkmark.circle",
                     disabled: !store.connectionState.isConnected,
                     onPressChanged: { pressed in
                         store.setAxelaButtonPressed(.ok, pressed: pressed)
-                    },
-                    onTapFallback: {
-                        store.pulseAxelaButton(.ok, label: "OK-单击")
                     }
                 )
+                .frame(maxWidth: .infinity)
+                .frame(height: 60)
+
                 HoldableHUDButton(
                     title: "下",
                     systemImage: "chevron.down",
                     disabled: !store.connectionState.isConnected,
                     onPressChanged: { pressed in
                         store.setAxelaButtonPressed(.down, pressed: pressed)
-                    },
-                    onTapFallback: {
-                        store.pulseAxelaButton(.down, label: "下-单击")
                     }
                 )
+                .frame(maxWidth: .infinity)
+                .frame(height: 60)
             }
             .padding(.vertical, 4)
         }
@@ -308,70 +308,165 @@ struct HUDControlView: View {
     }
 }
 
-/// 基于原生 ButtonStyle 跟踪按下/抬起状态，List 滚动取消手势或页面切换时保证安全回弹释放 (0x00)
-private struct HoldableHUDButton: View {
+/// 基于原生 UIControl 直接跟踪 touchDown / touchUpInside / touchUpOutside / touchCancel，
+/// 严格对齐原厂 AxelaSettingGestureViewController（按下发 1、抬起发 0，绝不补发 2 导致双重点击）
+private struct HoldableHUDButton: UIViewRepresentable {
     let title: String
     let systemImage: String
     let disabled: Bool
     let onPressChanged: (Bool) -> Void
-    let onTapFallback: () -> Void
 
-    @State private var isCurrentlyPressed = false
-    @State private var lastPressEventAt: Date = .distantPast
+    func makeCoordinator() -> Coordinator {
+        Coordinator(onPressChanged: onPressChanged)
+    }
 
-    var body: some View {
-        Button {
-            if !disabled && Date().timeIntervalSince(lastPressEventAt) > 0.1 {
-                onTapFallback()
-            }
-        } label: {
-            VStack(spacing: 4) {
-                Image(systemName: systemImage)
-                    .font(.headline)
-                Text(title)
-                    .font(.caption.bold())
-            }
-            .frame(maxWidth: .infinity)
-            .padding(.vertical, 12)
+    func makeUIView(context: Context) -> HUDKeyControl {
+        let control = HUDKeyControl(title: title, systemImage: systemImage)
+        control.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        control.setContentCompressionResistancePriority(.required, for: .vertical)
+        control.onPressStateChanged = { [weak coordinator = context.coordinator] pressed in
+            coordinator?.handlePressChange(pressed)
         }
-        .buttonStyle(HoldPressTrackingStyle(disabled: disabled) { pressed in
-            guard pressed != isCurrentlyPressed else { return }
-            isCurrentlyPressed = pressed
-            lastPressEventAt = Date()
+        control.isEnabled = !disabled
+        return control
+    }
+
+    func updateUIView(_ uiView: HUDKeyControl, context: Context) {
+        context.coordinator.onPressChanged = onPressChanged
+        uiView.update(title: title, systemImage: systemImage, disabled: disabled)
+    }
+
+    static func dismantleUIView(_ uiView: HUDKeyControl, coordinator: Coordinator) {
+        uiView.releaseIfNeeded()
+    }
+
+    final class Coordinator {
+        var onPressChanged: (Bool) -> Void
+
+        init(onPressChanged: @escaping (Bool) -> Void) {
+            self.onPressChanged = onPressChanged
+        }
+
+        func handlePressChange(_ pressed: Bool) {
             onPressChanged(pressed)
-        })
-        .disabled(disabled)
-        .onChange(of: disabled) { nowDisabled in
-            if nowDisabled, isCurrentlyPressed {
-                isCurrentlyPressed = false
-                lastPressEventAt = Date()
-                onPressChanged(false)
-            }
-        }
-        .onDisappear {
-            if isCurrentlyPressed {
-                isCurrentlyPressed = false
-                lastPressEventAt = Date()
-                onPressChanged(false)
-            }
         }
     }
 }
 
-private struct HoldPressTrackingStyle: ButtonStyle {
-    let disabled: Bool
-    let onPressChanged: (Bool) -> Void
+private final class HUDKeyControl: UIControl {
+    var onPressStateChanged: ((Bool) -> Void)?
 
-    func makeBody(configuration: Configuration) -> some View {
-        let active = configuration.isPressed && !disabled
-        configuration.label
-            .background(active ? Color.accentColor : Color.accentColor.opacity(0.14))
-            .foregroundColor(active ? .white : (disabled ? .secondary : .accentColor))
-            .cornerRadius(10)
-            .contentShape(Rectangle())
-            .opacity(disabled ? 0.5 : 1)
-            .onChange(of: configuration.isPressed) { pressed in
-                onPressChanged(pressed && !disabled)
-            }
+    private let iconView = UIImageView()
+    private let titleLabel = UILabel()
+    private var isKeyPressed = false
+
+    override var intrinsicContentSize: CGSize {
+        CGSize(width: UIView.noIntrinsicMetric, height: 60)
+    }
+
+    init(title: String, systemImage: String) {
+        super.init(frame: .zero)
+        isExclusiveTouch = true
+        layer.cornerRadius = 10
+        layer.masksToBounds = true
+
+        iconView.contentMode = .scaleAspectFit
+        iconView.preferredSymbolConfiguration = UIImage.SymbolConfiguration(textStyle: .headline)
+
+        titleLabel.font = UIFont.preferredFont(forTextStyle: .caption1).withBoldWeight()
+        titleLabel.textAlignment = .center
+
+        let stack = UIStackView(arrangedSubviews: [iconView, titleLabel])
+        stack.axis = .vertical
+        stack.alignment = .center
+        stack.spacing = 4
+        stack.isUserInteractionEnabled = false
+        stack.translatesAutoresizingMaskIntoConstraints = false
+
+        addSubview(stack)
+        NSLayoutConstraint.activate([
+            stack.centerXAnchor.constraint(equalTo: centerXAnchor),
+            stack.centerYAnchor.constraint(equalTo: centerYAnchor),
+            stack.leadingAnchor.constraint(greaterThanOrEqualTo: leadingAnchor, constant: 6),
+            stack.trailingAnchor.constraint(lessThanOrEqualTo: trailingAnchor, constant: -6),
+            heightAnchor.constraint(greaterThanOrEqualToConstant: 58)
+        ])
+
+        addTarget(self, action: #selector(handleTouchDown), for: .touchDown)
+        addTarget(self, action: #selector(handleTouchEnd), for: [.touchUpInside, .touchUpOutside, .touchCancel])
+
+        update(title: title, systemImage: systemImage, disabled: false)
+    }
+
+    @available(*, unavailable)
+    required init?(coder: NSCoder) {
+        fatalError("init(coder:) has not been implemented")
+    }
+
+    func update(title: String, systemImage: String, disabled: Bool) {
+        titleLabel.text = title
+        iconView.image = UIImage(systemName: systemImage)
+        isEnabled = !disabled
+        if disabled {
+            releaseIfNeeded()
+        }
+        refreshAppearance()
+    }
+
+    func releaseIfNeeded() {
+        guard isKeyPressed else { return }
+        isKeyPressed = false
+        refreshAppearance()
+        onPressStateChanged?(false)
+    }
+
+    override func didMoveToWindow() {
+        super.didMoveToWindow()
+        if window == nil {
+            releaseIfNeeded()
+        }
+    }
+
+    override func tintColorDidChange() {
+        super.tintColorDidChange()
+        refreshAppearance()
+    }
+
+    @objc private func handleTouchDown() {
+        guard isEnabled, !isKeyPressed else { return }
+        isKeyPressed = true
+        refreshAppearance()
+        onPressStateChanged?(true)
+    }
+
+    @objc private func handleTouchEnd() {
+        releaseIfNeeded()
+    }
+
+    private func refreshAppearance() {
+        let accent = tintColor ?? .systemBlue
+        if !isEnabled {
+            backgroundColor = accent.withAlphaComponent(0.14)
+            iconView.tintColor = .secondaryLabel
+            titleLabel.textColor = .secondaryLabel
+            alpha = 0.5
+        } else if isKeyPressed {
+            backgroundColor = accent
+            iconView.tintColor = .white
+            titleLabel.textColor = .white
+            alpha = 1.0
+        } else {
+            backgroundColor = accent.withAlphaComponent(0.14)
+            iconView.tintColor = accent
+            titleLabel.textColor = accent
+            alpha = 1.0
+        }
+    }
+}
+
+private extension UIFont {
+    func withBoldWeight() -> UIFont {
+        guard let descriptor = fontDescriptor.withSymbolicTraits(.traitBold) else { return self }
+        return UIFont(descriptor: descriptor, size: pointSize)
     }
 }

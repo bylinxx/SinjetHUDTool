@@ -7,6 +7,7 @@ struct FirmwareUpgradeView: View {
     @State private var showFileImporter = false
     @State private var showStartFlashConfirm = false
     @State private var showRebootConfirm = false
+    @FocusState private var isURLFieldFocused: Bool
 
     var body: some View {
         NavigationView {
@@ -20,7 +21,19 @@ struct FirmwareUpgradeView: View {
                 transferProgressSection
             }
             .listStyle(.insetGrouped)
+            .dismissKeyboardOnScrollCompat()
             .navigationTitle("固件刷机 (.pak)")
+            .toolbar {
+                ToolbarItemGroup(placement: .keyboard) {
+                    Spacer()
+                    Button("完成") {
+                        isURLFieldFocused = false
+                    }
+                }
+            }
+            .onDisappear {
+                isURLFieldFocused = false
+            }
             .fileImporter(
                 isPresented: $showFileImporter,
                 allowedContentTypes: [.data, .item],
@@ -92,14 +105,20 @@ struct FirmwareUpgradeView: View {
                     .font(.caption)
                     .foregroundColor(.secondary)
                 TextField("请输入更新清单 JSON URL (https://...)", text: $store.manifestURLString)
+                    .focused($isURLFieldFocused)
                     .textInputAutocapitalization(.never)
                     .disableAutocorrection(true)
                     .keyboardType(.URL)
+                    .submitLabel(.done)
+                    .onSubmit {
+                        isURLFieldFocused = false
+                    }
                     .font(.caption.monospaced())
                     .textFieldStyle(.roundedBorder)
 
                 HStack(spacing: 8) {
                     Button("清空") {
+                        isURLFieldFocused = false
                         store.manifestURLString = ""
                     }
                     .font(.caption)
@@ -109,6 +128,7 @@ struct FirmwareUpgradeView: View {
                     Spacer()
 
                     Button("拉取并预检") {
+                        isURLFieldFocused = false
                         Task {
                             await store.fetchRemoteManifestAndDownload()
                         }
@@ -133,6 +153,7 @@ struct FirmwareUpgradeView: View {
             }
 
             Button {
+                isURLFieldFocused = false
                 showFileImporter = true
             } label: {
                 Label("从「文件」App 导入本地 .pak 固件", systemImage: "folder.badge.plus")
@@ -318,5 +339,16 @@ struct FirmwareUpgradeView: View {
         let m = totalSec / 60
         let s = totalSec % 60
         return m > 0 ? "\(m)分\(s)秒" : "\(s)秒"
+    }
+}
+
+private extension View {
+    @ViewBuilder
+    func dismissKeyboardOnScrollCompat() -> some View {
+        if #available(iOS 16.0, *) {
+            self.scrollDismissesKeyboard(.interactively)
+        } else {
+            self
+        }
     }
 }

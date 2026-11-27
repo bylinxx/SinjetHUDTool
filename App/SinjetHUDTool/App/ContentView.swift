@@ -30,14 +30,10 @@ struct ContentView: View {
                 }
                 .tag(3)
         }
-        .onChange(of: selectedTab) { tab in
+        .onChange(of: selectedTab) { _ in
             guard store.connectionState.isConnected, !store.upgradePhase.isBusy else { return }
-            switch tab {
-            case 1:
-                store.setAppPage(.realtimeOBD)
-            default:
-                store.setAppPage(.homeGeneral)
-            }
+            // 原厂 MeterViewController 使用 0x04 (homeGeneral) 保持实时仪表帧 0x03/0x10 推送
+            store.setAppPage(.homeGeneral)
         }
     }
 }
