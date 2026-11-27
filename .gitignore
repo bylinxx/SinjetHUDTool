@@ -1,0 +1,29 @@
+# macOS
+.DS_Store
+.AppleDouble
+.LSOverride
+._*
+.Spotlight-V100
+.Trashes
+
+# Windows
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# Editors
+*.swp
+*.swo
+*~
+
+# Xcode user & temporary files
+xcuserdata/
+*.xcuserstate
+*.xcscmblueprint
+*.xccheckout
+*.moved-aside
+DerivedData/
+*.hmap
+*.ipa.dSYM.zip
+*.dSYM.zip
+*.dSYM
