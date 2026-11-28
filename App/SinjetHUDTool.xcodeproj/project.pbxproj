@@ -22,6 +22,7 @@
 		B10000130000000000000001 /* HUDControlView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000130000000000000001 /* HUDControlView.swift */; };
 		B10000140000000000000001 /* FirmwareUpgradeView.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000140000000000000001 /* FirmwareUpgradeView.swift */; };
 		B10000150000000000000001 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = F10000150000000000000001 /* Assets.xcassets */; };
+		B10000190000000000000001 /* DesignSystem.swift in Sources */ = {isa = PBXBuildFile; fileRef = F10000190000000000000001 /* DesignSystem.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -42,6 +43,7 @@
 		F10000140000000000000001 /* FirmwareUpgradeView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = FirmwareUpgradeView.swift; sourceTree = "<group>"; };
 		F10000150000000000000001 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		F10000160000000000000001 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		F10000190000000000000001 /* DesignSystem.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DesignSystem.swift; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -118,6 +120,7 @@
 		G10000060000000000000001 /* Views */ = {
 			isa = PBXGroup;
 			children = (
+				F10000190000000000000001 /* DesignSystem.swift */,
 				F10000110000000000000001 /* ConnectionView.swift */,
 				F10000120000000000000001 /* CarDataView.swift */,
 				F10000130000000000000001 /* HUDControlView.swift */,
@@ -210,6 +213,7 @@
 				B10000120000000000000001 /* CarDataView.swift in Sources */,
 				B10000130000000000000001 /* HUDControlView.swift in Sources */,
 				B10000140000000000000001 /* FirmwareUpgradeView.swift in Sources */,
+				B10000190000000000000001 /* DesignSystem.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -223,7 +227,9 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGNING_ALLOWED = NO;
+				"CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = YES;
 				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "-";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = dwarf;
 				ENABLE_STRICT_OBJC_MSGSEND = YES;
@@ -245,7 +251,9 @@
 				CLANG_ENABLE_MODULES = YES;
 				CLANG_ENABLE_OBJC_ARC = YES;
 				CODE_SIGNING_ALLOWED = NO;
+				"CODE_SIGNING_ALLOWED[sdk=iphonesimulator*]" = YES;
 				CODE_SIGNING_REQUIRED = NO;
+				"CODE_SIGN_IDENTITY[sdk=iphonesimulator*]" = "-";
 				COPY_PHASE_STRIP = NO;
 				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				ENABLE_NS_ASSERTIONS = NO;
@@ -278,7 +286,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sinjet.hudtool;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;
@@ -303,7 +311,7 @@
 				MARKETING_VERSION = 1.0.0;
 				PRODUCT_BUNDLE_IDENTIFIER = com.sinjet.hudtool;
 				PRODUCT_NAME = "$(TARGET_NAME)";
-				SUPPORTED_PLATFORMS = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
 				SWIFT_EMIT_LOC_STRINGS = NO;
 				SWIFT_VERSION = 5.0;
 				TARGETED_DEVICE_FAMILY = 1;

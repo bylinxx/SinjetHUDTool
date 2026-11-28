@@ -117,17 +117,6 @@ struct QuickCheckSummary {
     var lastUpdated: Date?
 }
 
-struct VehicleSettingsState {
-    var frontLeftWindow: Bool = false
-    var frontRightWindow: Bool = false
-    var rearWindow: Bool = false
-    var hasWindowState: Bool = false
-
-    var unlockOnP: Bool = false
-    var lockOnD: Bool = false
-    var hasLockState: Bool = false
-}
-
 struct AxelaPanelCalibration {
     var openCurrent: Int = 0
     var openMin: Int = -50
@@ -244,44 +233,23 @@ struct TPMSState {
     var highTempAlarm: UInt8?
 }
 
-// MARK: - 蓝牙控车 (ID 0x05)
+// MARK: - 自动关闭发动机启停 (ID 0x08 / 0x01 / 0x07)
 
-enum BTRemoteAction: Int, CaseIterable, Identifiable {
-    case startEngine = 0
-    case stopEngine = 1
-    case unlock = 2
-    case lock = 3
-    case openWindow = 4
-    case closeWindow = 5
-    case openSunroof = 6
-    case openTrunk = 7
+enum HUDFeatureSyncCapability: Equatable {
+    case unknown
+    case probing
+    case synced
+    case unsupported
+}
 
-    var id: Int { rawValue }
+struct HUDAutoStartStopState {
+    var capability: HUDFeatureSyncCapability = .unknown
+    var isEnabled: Bool = false
+    var isPending: Bool = false
+    var statusMessage: String = "连接车机后自动读取当前启停开关状态"
 
-    var title: String {
-        switch self {
-        case .startEngine: return "启动引擎"
-        case .stopEngine: return "熄火"
-        case .unlock: return "开锁"
-        case .lock: return "关锁"
-        case .openWindow: return "开窗"
-        case .closeWindow: return "关窗"
-        case .openSunroof: return "开天窗"
-        case .openTrunk: return "开后备箱"
-        }
-    }
-
-    var commandPair: (UInt8, UInt8) {
-        switch self {
-        case .startEngine: return (0x01, 0x01)
-        case .stopEngine: return (0x01, 0x00)
-        case .unlock: return (0x03, 0x01)
-        case .lock: return (0x03, 0x00)
-        case .openWindow: return (0x02, 0x01)
-        case .closeWindow: return (0x02, 0x00)
-        case .openSunroof: return (0x04, 0x01)
-        case .openTrunk: return (0x05, 0x01)
-        }
+    var isSynced: Bool {
+        capability == .synced
     }
 }
 
@@ -291,3 +259,4 @@ enum HUDAppPage: UInt8, CaseIterable {
     case quickCheck = 0x03
     case homeGeneral = 0x04
 }
+

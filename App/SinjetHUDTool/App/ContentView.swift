@@ -14,19 +14,19 @@ struct ContentView: View {
 
             CarDataView()
                 .tabItem {
-                    Label("车辆数据", systemImage: "gauge")
+                    Label("车辆", systemImage: "car.fill")
                 }
                 .tag(1)
 
             HUDControlView()
                 .tabItem {
-                    Label("HUD 控制", systemImage: "slider.horizontal.3")
+                    Label("操控", systemImage: "slider.horizontal.3")
                 }
                 .tag(2)
 
             FirmwareUpgradeView()
                 .tabItem {
-                    Label("固件刷机", systemImage: "arrow.up.doc")
+                    Label("刷机", systemImage: "arrow.up.doc.fill")
                 }
                 .tag(3)
         }

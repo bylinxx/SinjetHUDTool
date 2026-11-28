@@ -25,14 +25,11 @@ final class HUDStore: ObservableObject {
     @Published var faultCodes: [String] = []
     @Published var lastFaultActionMessage: String = ""
     @Published var quickCheck = QuickCheckSummary()
-    @Published var vehicleSettings = VehicleSettingsState()
     @Published var tpms = TPMSState()
 
-    // MARK: - HUD 控制与蓝牙控车
+    // MARK: - HUD 控制与自动启停设置
     @Published var axelaCalibration = AxelaPanelCalibration()
-    @Published var btRemotePassword: String = ""
-    @Published var btRemoteStatusMessage: String = ""
-    @Published var btRemoteAllowSetPassword: Bool = false
+    @Published var autoStartStop = HUDAutoStartStopState()
 
     // MARK: - `.pak` 固件刷机
     @Published var speedMode: TransferSpeedMode = .balanced {
@@ -59,6 +56,7 @@ final class HUDStore: ObservableObject {
     private var statusPollStep: Int = 0
     private var mcuUpgradeMethod: Int = 0 // 0=未识别, 1=旧版0x37-0x39, 2=新版0x3A
     private var heartbeatTimer: Timer?
+    private var autoStartStopProbeTask: Task<Void, Never>?
 
     private var vinPart0: String?
     private var vinPart1: String?
@@ -144,27 +142,6 @@ final class HUDStore: ObservableObject {
         bleManager.sendPayload(HUDCommands.clearFaultCodes(), summary: "清除故障码 (03 06)")
     }
 
-    func sendWindowSettings(frontLeft: Bool, frontRight: Bool, rear: Bool) {
-        vehicleSettings.frontLeftWindow = frontLeft
-        vehicleSettings.frontRightWindow = frontRight
-        vehicleSettings.rearWindow = rear
-        vehicleSettings.hasWindowState = true
-        bleManager.sendPayload(
-            HUDCommands.windowControlSetting(frontLeft: frontLeft, frontRight: frontRight, rear: rear),
-            summary: "车窗设置 FL=\(frontLeft ? 1 : 0) FR=\(frontRight ? 1 : 0) R=\(rear ? 1 : 0) (03 20)"
-        )
-    }
-
-    func sendLockUnlockSettings(unlockOnP: Bool, lockOnD: Bool) {
-        vehicleSettings.unlockOnP = unlockOnP
-        vehicleSettings.lockOnD = lockOnD
-        vehicleSettings.hasLockState = true
-        bleManager.sendPayload(
-            HUDCommands.lockUnlockSetting(unlockOnP: unlockOnP, lockOnD: lockOnD),
-            summary: "锁车设置 P解锁=\(unlockOnP ? 1 : 0) D落锁=\(lockOnD ? 1 : 0) (03 21)"
-        )
-    }
-
     // MARK: - TPMS 控制
 
     func startTPMSPair(for tire: TirePosition) {
@@ -247,33 +224,52 @@ final class HUDStore: ObservableObject {
         bleManager.sendPayload(HUDCommands.axelaPanelCloseCali(signed), summary: "写入翻盖关闭标定=\(signed) (06 04)")
     }
 
-    // MARK: - 蓝牙控车 (ID 0x05)
+    // MARK: - 自动关闭发动机启停 (ID 0x08 / 0x01 / 0x07)
 
-    func sendBTRemoteAction(_ action: BTRemoteAction) {
+    func queryAutoStartStop() {
+        guard connectionState.isConnected else {
+            autoStartStop.statusMessage = "请先蓝牙连接车机"
+            return
+        }
+        guard !upgradePhase.isBusy else { return }
+
+        if autoStartStop.capability != .synced {
+            autoStartStop.capability = .probing
+            autoStartStop.statusMessage = "正在读取车机启停开关状态..."
+        }
+        bleManager.sendPayload(HUDCommands.queryAutoStartStop(), summary: "查询自动关闭启停状态 (08 01 07 FF)")
+
+        autoStartStopProbeTask?.cancel()
+        autoStartStopProbeTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(nanoseconds: 2_000_000_000)
+            guard let self, !Task.isCancelled else { return }
+            if self.connectionState.isConnected && self.autoStartStop.capability == .probing {
+                self.autoStartStop.capability = .unsupported
+                self.autoStartStop.statusMessage = "当前固件未启用蓝牙直控，请刷入含启停控制的固件或使用 OSD 遥控设置"
+            }
+        }
+    }
+
+    func setAutoStartStop(enabled: Bool) {
+        guard connectionState.isConnected, !upgradePhase.isBusy else { return }
+        autoStartStop.isEnabled = enabled
+        autoStartStop.isPending = true
+        autoStartStop.statusMessage = enabled ? "正在开启自动关闭启停..." : "正在关闭自动关闭启停..."
         bleManager.sendPayload(
-            HUDCommands.btRemoteControl(action: action, password8: btRemotePassword),
-            summary: "蓝牙控车: \(action.title) (05)"
+            HUDCommands.setAutoStartStop(enabled: enabled),
+            summary: "设置自动关闭启停 = \(enabled ? "开启" : "关闭") (08 01 07 \(enabled ? "01" : "00"))"
         )
     }
 
-    func verifyBTRemotePassword() {
-        guard let payload = HUDCommands.btRemoteVerifyPassword(btRemotePassword) else {
-            btRemoteStatusMessage = "密码需为 8 位 ASCII 字符"
-            return
-        }
-        bleManager.sendPayload(payload, summary: "蓝牙控车校验密码 (05 A0)")
-    }
+    // MARK: - HUD 主题步进切换 (ID 0x08 / 0x01 / 0x05)
 
-    func requestBTRemoteSetPassword() {
-        bleManager.sendPayload(HUDCommands.btRemoteRequestSetPassword(), summary: "请求设置控车密码 (05 A1)")
-    }
-
-    func setBTRemoteNewPassword(_ newPwd: String) {
-        guard let payload = HUDCommands.btRemoteSetNewPassword(newPwd) else {
-            btRemoteStatusMessage = "新密码需为 8 位 ASCII 字符"
-            return
-        }
-        bleManager.sendPayload(payload, summary: "下发新控车密码 (05 A2)")
+    /// 通用步进切主题（08 01 05 01 / 00；兼容所有原厂及其他车型 HUD）
+    func stepTheme(next: Bool) {
+        guard connectionState.isConnected, !upgradePhase.isBusy else { return }
+        bleManager.sendPayload(
+            HUDCommands.stepTheme(next: next),
+            summary: next ? "步进切换下一套主题 (08 01 05 01)" : "步进切换上一套主题 (08 01 05 00)"
+        )
     }
 
     // MARK: - `.pak` 固件加载、远程清单拉取与刷机控制
@@ -519,8 +515,6 @@ final class HUDStore: ObservableObject {
             handleID03(Data(body))
         case 0x04:
             handleID04(Data(body))
-        case 0x05:
-            handleID05(Data(body))
         case 0x06:
             handleID06(Data(body))
         case 0x08:
@@ -584,7 +578,9 @@ final class HUDStore: ObservableObject {
         case 0x06:
             guard msg.count >= 3 else { return }
             let mask = msg[1]
-            let gear = msg[2]
+            // HUDBACA0 实测发送 5B 帧 [03, 06, mask, turnSignal, gear]（剥离 03 后 msg 为 4B，档位在 msg[3]）；
+            // 兼容 4B 帧旧机型 [03, 06, mask, gear]（msg 为 3B，档位在 msg[2]）
+            let gear: UInt8 = (msg.count >= 4) ? msg[3] : msg[2]
             bodyGear.frontLeftDoorOpen = (mask & 0x01) != 0
             bodyGear.frontRightDoorOpen = (mask & 0x02) != 0
             bodyGear.rearLeftDoorOpen = (mask & 0x04) != 0
@@ -701,19 +697,6 @@ final class HUDStore: ObservableObject {
             quickCheck.primaryCatalystTemp = primaryCat
             quickCheck.lastUpdated = Date()
             appendLog(.rx, summary: "收到车况体检汇总 (03 1A)：故障=\(faultNum) 节气门=\(String(format: "%.1f%%", throttle))", hex: msg.hexSpacedString)
-        case 0x20:
-            guard msg.count >= 4 else { return }
-            vehicleSettings.frontLeftWindow = msg[1] != 0
-            vehicleSettings.frontRightWindow = msg[2] != 0
-            vehicleSettings.rearWindow = msg[3] != 0
-            vehicleSettings.hasWindowState = true
-            appendLog(.rx, summary: "回读车窗设置 (03 20)", hex: msg.hexSpacedString)
-        case 0x21:
-            guard msg.count >= 2 else { return }
-            vehicleSettings.unlockOnP = (msg[1] & 0xF0) != 0
-            vehicleSettings.lockOnD = (msg[1] & 0x0F) != 0
-            vehicleSettings.hasLockState = true
-            appendLog(.rx, summary: "回读 P/D 锁车设置 (03 21)", hex: msg.hexSpacedString)
         default:
             break
         }
@@ -777,47 +760,6 @@ final class HUDStore: ObservableObject {
         }
     }
 
-    // MARK: - ID 0x05 蓝牙控车
-
-    private func handleID05(_ msg: Data) {
-        guard let subCmd = msg.first else { return }
-        switch subCmd {
-        case 0xA0:
-            if msg.count >= 2 {
-                btRemoteStatusMessage = (msg[1] == 0) ? "控车密码校验成功" : "控车密码校验失败"
-            }
-        case 0xA1:
-            if msg.count >= 2 {
-                btRemoteAllowSetPassword = (msg[1] == 0)
-                btRemoteStatusMessage = (msg[1] == 0) ? "允许设置新控车密码" : "当前不允许修改控车密码"
-            }
-        case 0xA2:
-            if msg.count >= 2 {
-                if msg[1] == 0 {
-                    if msg.count >= 10 {
-                        btRemotePassword = String(decoding: msg[2..<10], as: UTF8.self)
-                    }
-                    btRemoteStatusMessage = "新控车密码设置成功"
-                } else {
-                    btRemoteStatusMessage = "新控车密码设置失败"
-                }
-            }
-        case 0xA3:
-            btRemoteStatusMessage = "蓝牙控车模块就绪"
-            if btRemotePassword.utf8.count == 8 {
-                verifyBTRemotePassword()
-            }
-        case 0xE2:
-            if msg.count >= 3 {
-                let code = msg[2]
-                btRemoteStatusMessage = (code == 7 || code == 8) ? "密码校验错误 (E2:\(code))" : "蓝牙控车执行错误 (E2:\(code))"
-            }
-        default:
-            break
-        }
-        appendLog(.rx, summary: "蓝牙控车响应 0x\(String(format: "%02X", subCmd))", hex: msg.hexSpacedString)
-    }
-
     // MARK: - ID 0x06 昂克赛拉面板校准 / 硬件信息 / MCU 错误日志
 
     private func handleID06(_ msg: Data) {
@@ -870,11 +812,28 @@ final class HUDStore: ObservableObject {
         }
     }
 
-    // MARK: - ID 0x08 TTS 播报完成
+    // MARK: - ID 0x08 自动启停同步回传 & TTS 播报完成
 
     private func handleID08(_ msg: Data) {
         if msg.count >= 2 && msg[0] == 0x0A && msg[1] == 0x01 {
             appendLog(.rx, summary: "MCU TTS 播报完成 (08 0A 01)", hex: msg.hexSpacedString)
+            return
+        }
+
+        // 08 01 07 <enabled(0|1)> 自动关闭发动机启停状态回传
+        if msg.count >= 3 && msg[0] == 0x01 && msg[1] == 0x07 {
+            let enabled = msg[2] != 0
+            autoStartStopProbeTask?.cancel()
+            autoStartStop.capability = .synced
+            autoStartStop.isEnabled = enabled
+            autoStartStop.isPending = false
+            autoStartStop.statusMessage = enabled ? "已开启：着车后将自动关闭发动机启停" : "已关闭：保持原车发动机启停默认状态"
+            appendLog(
+                .rx,
+                summary: "自动关闭启停同步 (08 01 07)：\(enabled ? "开启" : "关闭")",
+                hex: msg.hexSpacedString
+            )
+            return
         }
     }
 
@@ -1114,11 +1073,14 @@ extension HUDStore: BLEManagerDelegate {
                 self.upgradePhase = (self.loadedPakReport?.isStructurallyValid == true) ? .validatedReady : .idle
             }
 
-            // 建连握手：对时 + 上报页面 + 立即探测版本与 Magic
+            // 建连握手：对时 + 上报页面 + 立即探测版本、Magic 与自动启停状态
             self.syncTimeNow()
             self.setAppPage(self.currentAppPage)
             self.bleManager.sendPayload(HUDCommands.reqMCUMagic(), summary: "查询 MCU Magic (3A 10)")
             self.bleManager.sendPayload(HUDCommands.reqMCUVersionSimple(), summary: "查询 MCU 版本 (3A 12)")
+            self.autoStartStop.capability = .probing
+            self.autoStartStop.isPending = false
+            self.queryAutoStartStop()
             self.startHeartbeatTimer()
         }
     }
@@ -1126,6 +1088,10 @@ extension HUDStore: BLEManagerDelegate {
     nonisolated func bleManager(_ manager: BLEManager, didDisconnect reason: String?) {
         Task { @MainActor in
             self.stopHeartbeatTimer()
+            self.autoStartStopProbeTask?.cancel()
+            self.autoStartStop.capability = .unknown
+            self.autoStartStop.isPending = false
+            self.autoStartStop.statusMessage = "连接车机后自动读取当前启停开关状态"
             self.connectedDeviceName = ""
             self.hasSentAppInitOK = false
             self.mcuUpgradeMethod = 0

@@ -7,23 +7,31 @@ struct FirmwareUpgradeView: View {
     @State private var showFileImporter = false
     @State private var showStartFlashConfirm = false
     @State private var showRebootConfirm = false
+    @State private var showRemoteURLInput = false
     @FocusState private var isURLFieldFocused: Bool
 
     var body: some View {
         NavigationView {
-            List {
-                hudTargetSection
-                sourceSection
-                if let report = store.loadedPakReport {
-                    precheckReportSection(report)
+            ScrollView {
+                VStack(spacing: HUDDesign.sectionSpacing) {
+                    hudTargetHeroCard
+                    sourceSection
+                    if let report = store.loadedPakReport {
+                        precheckReportSection(report)
+                    }
+                    speedControlSection
+                    transferProgressSection
                 }
-                speedControlSection
-                transferProgressSection
+                .padding(.horizontal, HUDDesign.pageHorizontalPadding)
+                .padding(.vertical, 14)
             }
-            .listStyle(.insetGrouped)
-            .dismissKeyboardOnScrollCompat()
-            .navigationTitle("固件刷机 (.pak)")
+            .background(Color(.systemGroupedBackground))
+            .hudDismissKeyboardOnScroll()
+            .navigationTitle("固件刷机")
             .toolbar {
+                ToolbarItem(placement: .navigationBarTrailing) {
+                    HUDToolbarConnectionPill(state: store.connectionState)
+                }
                 ToolbarItemGroup(placement: .keyboard) {
                     Spacer()
                     Button("完成") {
@@ -62,293 +70,458 @@ struct FirmwareUpgradeView: View {
                     store.confirmRebootAndFlash()
                 }
             } message: {
-                Text("将下发 3A 30 01 00 指令。HUD 将立即断开蓝牙并重启刷写，请保持车辆供电直至重启完成。")
+                Text("将下发安全刷写重启指令。HUD 将立即断开蓝牙并重启刷写，请保持车辆供电直至重启完成。")
             }
         }
         .navigationViewStyle(.stack)
     }
 
-    // MARK: - 已连接 HUD 信息
+    // MARK: - 目标 HUD 状态头卡
 
-    private var hudTargetSection: some View {
-        Section(header: Text("当前连接的 HUD 目标")) {
-            HStack {
-                Text("模块型号 / 版本")
-                    .foregroundColor(.secondary)
-                Spacer()
-                if store.connectionState.isConnected {
-                    Text("\(store.deviceInfo.mcuMagic.isEmpty ? "读取中" : store.deviceInfo.mcuMagic) · \(store.deviceInfo.versionDisplay)")
-                        .font(.subheadline.bold().monospaced())
-                } else {
-                    Text("未连接")
-                        .foregroundColor(.orange)
+    private var hudTargetHeroCard: some View {
+        ZStack(alignment: .topTrailing) {
+            RoundedRectangle(cornerRadius: 18, style: .continuous)
+                .fill(store.connectionState.isConnected ? HUDDesign.connectedHeroGradient : HUDDesign.cockpitGradient)
+
+            Circle()
+                .fill((store.connectionState.isConnected ? Color.green : Color.orange).opacity(0.22))
+                .frame(width: 140, height: 140)
+                .blur(radius: 32)
+                .offset(x: 35, y: -40)
+
+            VStack(alignment: .leading, spacing: 12) {
+                HStack(spacing: 12) {
+                    ZStack {
+                        RoundedRectangle(cornerRadius: 12, style: .continuous)
+                            .fill(Color.white.opacity(0.14))
+                            .frame(width: 44, height: 44)
+                        Image(systemName: "cpu")
+                            .font(.title3.weight(.semibold))
+                            .foregroundColor(.white)
+                    }
+
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text("目标 HUD 设备")
+                            .font(.caption)
+                            .foregroundColor(.white.opacity(0.68))
+                        if store.connectionState.isConnected {
+                            Text("\(store.deviceInfo.mcuMagic.isEmpty ? "读取型号中..." : store.deviceInfo.mcuMagic) · v\(store.deviceInfo.versionDisplay)")
+                                .font(.headline.weight(.bold).monospaced())
+                                .foregroundColor(.white)
+                        } else {
+                            Text("未连接车机")
+                                .font(.headline.weight(.bold))
+                                .foregroundColor(.orange)
+                        }
+                    }
+
+                    Spacer()
+                }
+
+                HStack(spacing: 8) {
+                    targetChip(icon: "speedometer", text: "接收速率 \(store.deviceInfo.mcuRxRate) B/s")
+                    targetChip(icon: "arrow.left.arrow.right", text: "MTU \(store.deviceInfo.maxWriteLength)B")
+                    Spacer()
                 }
             }
-            HStack {
-                Text("透传能力")
-                    .foregroundColor(.secondary)
-                Spacer()
-                Text("mcuRxRate \(store.deviceInfo.mcuRxRate) B/s · MTU \(store.deviceInfo.maxWriteLength)B")
-                    .font(.caption.monospacedDigit())
-                    .foregroundColor(.secondary)
-            }
+            .padding(16)
         }
+        .clipShape(RoundedRectangle(cornerRadius: 18, style: .continuous))
+        .shadow(color: Color.black.opacity(0.14), radius: 10, x: 0, y: 5)
     }
 
-    // MARK: - 固件获取源
+    private func targetChip(icon: String, text: String) -> some View {
+        HStack(spacing: 4) {
+            Image(systemName: icon)
+                .font(.caption2)
+            Text(text)
+                .font(.caption2.weight(.semibold).monospacedDigit())
+        }
+        .foregroundColor(.white.opacity(0.88))
+        .padding(.horizontal, 9)
+        .padding(.vertical, 4)
+        .background(Color.white.opacity(0.12))
+        .clipShape(Capsule())
+    }
+
+    // MARK: - 步骤 1：选择固件来源
 
     private var sourceSection: some View {
         let trimmedURL = store.manifestURLString.trimmingCharacters(in: .whitespacesAndNewlines)
-        return Section(header: Text("选择固件来源")) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text("远程更新清单 JSON URL")
-                    .font(.caption)
-                    .foregroundColor(.secondary)
-                TextField("请输入更新清单 JSON URL (https://...)", text: $store.manifestURLString)
-                    .focused($isURLFieldFocused)
-                    .textInputAutocapitalization(.never)
-                    .disableAutocorrection(true)
-                    .keyboardType(.URL)
-                    .submitLabel(.done)
-                    .onSubmit {
-                        isURLFieldFocused = false
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HUDSectionHeader(title: "1. 选择固件包 (.pak)", subtitle: "支持从本地文件导入或远程更新清单下载")
+
+            HUDCard {
+                // 主推荐操作：本地导入 .pak
+                Button {
+                    isURLFieldFocused = false
+                    showFileImporter = true
+                } label: {
+                    HStack(spacing: 12) {
+                        HUDIconBadge(systemImage: "folder.badge.plus", color: .accentColor, size: 40)
+                        VStack(alignment: .leading, spacing: 2) {
+                            Text("从「文件」App 导入本地 .pak 固件")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.primary)
+                            Text("自动完成 21 记录完整性、MD5 与型号安全预检")
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                        Spacer()
+                        Image(systemName: "chevron.right")
+                            .font(.caption.weight(.semibold))
+                            .foregroundColor(Color(.tertiaryLabel))
                     }
-                    .font(.caption.monospaced())
-                    .textFieldStyle(.roundedBorder)
+                    .padding(12)
+                    .background(Color(.tertiarySystemGroupedBackground))
+                    .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
+                }
+                .buttonStyle(.plain)
+                .disabled(store.upgradePhase.isBusy)
 
-                HStack(spacing: 8) {
-                    Button("清空") {
-                        isURLFieldFocused = false
-                        store.manifestURLString = ""
-                    }
-                    .font(.caption)
-                    .buttonStyle(.bordered)
-                    .disabled(trimmedURL.isEmpty || store.upgradePhase.isBusy)
+                // 远程清单拉取（可展开）
+                DisclosureGroup(isExpanded: $showRemoteURLInput) {
+                    VStack(alignment: .leading, spacing: 10) {
+                        TextField("输入更新清单 JSON URL (https://...)", text: $store.manifestURLString)
+                            .focused($isURLFieldFocused)
+                            .textInputAutocapitalization(.never)
+                            .disableAutocorrection(true)
+                            .keyboardType(.URL)
+                            .submitLabel(.done)
+                            .onSubmit {
+                                isURLFieldFocused = false
+                            }
+                            .font(.caption.monospaced())
+                            .padding(10)
+                            .background(Color(.tertiarySystemGroupedBackground))
+                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
 
-                    Spacer()
+                        HStack(spacing: 10) {
+                            Button("清空") {
+                                isURLFieldFocused = false
+                                store.manifestURLString = ""
+                            }
+                            .font(.caption.weight(.medium))
+                            .buttonStyle(.bordered)
+                            .disabled(trimmedURL.isEmpty || store.upgradePhase.isBusy)
 
-                    Button("拉取并预检") {
-                        isURLFieldFocused = false
-                        Task {
-                            await store.fetchRemoteManifestAndDownload()
+                            Spacer()
+
+                            Button {
+                                isURLFieldFocused = false
+                                Task {
+                                    await store.fetchRemoteManifestAndDownload()
+                                }
+                            } label: {
+                                Label("拉取并预检", systemImage: "arrow.down.circle.fill")
+                                    .font(.caption.weight(.semibold))
+                            }
+                            .buttonStyle(.borderedProminent)
+                            .disabled(store.upgradePhase.isBusy || trimmedURL.isEmpty)
                         }
                     }
-                    .font(.caption.bold())
-                    .buttonStyle(.borderedProminent)
-                    .disabled(store.upgradePhase.isBusy || trimmedURL.isEmpty)
-                }
-            }
-            .padding(.vertical, 4)
-
-            if let manifest = store.remoteManifest {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("清单信息：v\(manifest.vcode)（\(manifest.date)）")
-                        .font(.caption.bold())
-                    if !manifest.changed.isEmpty {
-                        Text(manifest.changed)
-                            .font(.caption)
-                            .foregroundColor(.secondary)
+                    .padding(.top, 8)
+                } label: {
+                    HStack(spacing: 10) {
+                        HUDIconBadge(systemImage: "link", color: .indigo, size: 30, iconFont: .caption.weight(.bold))
+                        Text("通过远程更新清单 URL 拉取")
+                            .font(.subheadline.weight(.medium))
+                            .foregroundColor(.primary)
                     }
                 }
-            }
+                .tint(.secondary)
 
-            Button {
-                isURLFieldFocused = false
-                showFileImporter = true
-            } label: {
-                Label("从「文件」App 导入本地 .pak 固件", systemImage: "folder.badge.plus")
+                if let manifest = store.remoteManifest {
+                    VStack(alignment: .leading, spacing: 4) {
+                        Text("远端清单：v\(manifest.vcode)（\(manifest.date)）")
+                            .font(.caption.weight(.bold))
+                        if !manifest.changed.isEmpty {
+                            Text(manifest.changed)
+                                .font(.caption2)
+                                .foregroundColor(.secondary)
+                        }
+                    }
+                    .padding(10)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .background(Color.blue.opacity(0.08))
+                    .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+                }
             }
-            .disabled(store.upgradePhase.isBusy)
         }
     }
 
-    // MARK: - 本地 21 记录完整性预检报告
+    // MARK: - 完整性预检报告卡
 
     private func precheckReportSection(_ report: PakValidationReport) -> some View {
         let blocker = store.upgradePrecheckBlocker()
-        return Section(header: Text(".pak 本地完整性与安全预检")) {
-            HStack {
-                Image(systemName: report.isStructurallyValid ? "checkmark.seal.fill" : "xmark.octagon.fill")
-                    .foregroundColor(report.isStructurallyValid ? .green : .red)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(report.fileName)
-                        .font(.subheadline.bold())
-                    Text(String(format: "%.2f KB (%d B)", Double(report.fileSize) / 1024.0, report.fileSize))
-                        .font(.caption)
-                        .foregroundColor(.secondary)
-                }
+        let passedAll = report.isStructurallyValid && blocker == nil
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HUDSectionHeader(title: "固件完整性与安全预检") {
+                HUDStatusPill(
+                    text: passedAll ? "校验通过" : (report.isStructurallyValid ? "待确认条件" : "包异常"),
+                    color: passedAll ? .green : (report.isStructurallyValid ? .orange : .red)
+                )
             }
 
-            reportRow("内嵌模块 (#SW_MODULE#)", report.swModules.isEmpty ? "未检出" : report.swModules.joined(separator: ", "))
-            reportRow("头部版本 / #SW_DATE#", "\(report.fileVersion) / \(report.swDates.joined(separator: ", "))")
-            reportRow("子记录数", "\(report.recordCount) 条")
-            reportRow(
-                "校验结果",
-                "MD5错 \(report.md5ErrorCount) · 头错 \(report.headerErrorCount) · 块错 \(report.blockErrorCount)" +
-                (report.placeholderBlockCount > 0 ? " (含原厂0xFE占位 \(report.placeholderBlockCount))" : "")
-            )
-            reportRow("整包 MD5", report.wholeFileMD5, monospaced: true)
-
-            if let err = report.structuralError {
-                Text("结构错误：\(err)")
-                    .font(.caption)
-                    .foregroundColor(.red)
-            }
-
-            if let blocker {
-                HStack(alignment: .top, spacing: 6) {
-                    Image(systemName: "exclamationmark.triangle.fill")
-                        .foregroundColor(.orange)
-                    Text(blocker)
-                        .font(.caption)
-                        .foregroundColor(.orange)
+            HUDCard(
+                borderColor: passedAll ? Color.green.opacity(0.45) : Color.orange.opacity(0.45),
+                borderWidth: 1.2
+            ) {
+                HStack(spacing: 12) {
+                    HUDIconBadge(
+                        systemImage: report.isStructurallyValid ? "checkmark.seal.fill" : "xmark.octagon.fill",
+                        color: report.isStructurallyValid ? .green : .red,
+                        size: 38
+                    )
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text(report.fileName)
+                            .font(.subheadline.weight(.bold))
+                            .lineLimit(2)
+                        Text(String(format: "%.2f KB (%d B) · %d 条子记录", Double(report.fileSize) / 1024.0, report.fileSize, report.recordCount))
+                            .font(.caption2.monospacedDigit())
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
                 }
-            } else {
-                HStack(spacing: 6) {
-                    Image(systemName: "checkmark.circle.fill")
-                        .foregroundColor(.green)
-                    Text("型号匹配、版本号合规且 21 记录校验全通过，允许刷机")
-                        .font(.caption)
-                        .foregroundColor(.green)
+
+                Divider()
+
+                VStack(spacing: 8) {
+                    HUDInfoRow(
+                        title: "内嵌模块",
+                        value: report.swModules.isEmpty ? "未检出" : report.swModules.joined(separator: ", "),
+                        monospaced: true
+                    )
+                    HUDInfoRow(
+                        title: "头部版本 / 日期",
+                        value: "\(report.fileVersion) / \(report.swDates.joined(separator: ", "))",
+                        monospaced: true
+                    )
+                    HUDInfoRow(
+                        title: "校验明细",
+                        value: "MD5错 \(report.md5ErrorCount) · 头错 \(report.headerErrorCount) · 块错 \(report.blockErrorCount)" +
+                            (report.placeholderBlockCount > 0 ? " (含占位 \(report.placeholderBlockCount))" : "")
+                    )
+                    HUDInfoRow(
+                        title: "整包 MD5",
+                        value: report.wholeFileMD5,
+                        monospaced: true
+                    )
+                }
+
+                if let err = report.structuralError {
+                    statusBanner(icon: "xmark.octagon.fill", text: "结构错误：\(err)", color: .red)
+                }
+
+                if let blocker {
+                    statusBanner(icon: "exclamationmark.triangle.fill", text: blocker, color: .orange)
+                } else {
+                    statusBanner(icon: "checkmark.circle.fill", text: "型号匹配、版本号合规且 21 记录校验全通过，允许安全刷机", color: .green)
                 }
             }
         }
     }
 
-    private func reportRow(_ title: String, _ value: String, monospaced: Bool = false) -> some View {
-        HStack {
-            Text(title)
+    private func statusBanner(icon: String, text: String, color: Color) -> some View {
+        HStack(alignment: .top, spacing: 8) {
+            Image(systemName: icon)
                 .font(.caption)
-                .foregroundColor(.secondary)
-            Spacer()
-            Text(value)
-                .font(monospaced ? .system(size: 10, design: .monospaced) : .caption.bold())
-                .multilineTextAlignment(.trailing)
+                .foregroundColor(color)
+                .padding(.top, 1)
+            Text(text)
+                .font(.caption.weight(.medium))
+                .foregroundColor(color)
+                .fixedSize(horizontal: false, vertical: true)
         }
+        .padding(10)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(color.opacity(0.10))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
-    // MARK: - 三档速率与自动降速控制
+    // MARK: - 步骤 2：发包速率与自动保护
 
     private var speedControlSection: some View {
-        Section(
-            header: Text("发包速率与自动保护"),
-            footer: Text(store.speedMode.subtitle)
-        ) {
-            Picker("刷机速率", selection: $store.speedMode) {
-                ForEach(TransferSpeedMode.allCases) { mode in
-                    Text(mode.rawValue).tag(mode)
-                }
-            }
-            .pickerStyle(.segmented)
+        VStack(alignment: .leading, spacing: 10) {
+            HUDSectionHeader(title: "2. 传输策略与保护")
 
-            Toggle("重传自动平滑降速（推荐开启）", isOn: $store.autoThrottleEnabled)
-                .font(.subheadline)
+            HUDCard {
+                VStack(alignment: .leading, spacing: 8) {
+                    Picker("刷机速率", selection: $store.speedMode) {
+                        ForEach(TransferSpeedMode.allCases) { mode in
+                            Text(mode.rawValue).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
 
-            if !store.upgradeTelemetry.autoThrottleNotice.isEmpty {
-                Text(store.upgradeTelemetry.autoThrottleNotice)
-                    .font(.caption)
-                    .foregroundColor(.orange)
-            }
-        }
-    }
-
-    // MARK: - 传输状态、遥测与主操作按钮
-
-    private var transferProgressSection: some View {
-        Section(header: Text("传输进度与控制 (ID 0x3A Pull 模式)")) {
-            VStack(alignment: .leading, spacing: 8) {
-                Text(store.upgradePhase.title)
-                    .font(.subheadline.bold())
-
-                ProgressView(value: store.upgradeTelemetry.progress)
-                    .progressViewStyle(.linear)
-
-                HStack {
-                    Text(String(format: "%.1f%% (%d / %d B)",
-                                store.upgradeTelemetry.progress * 100.0,
-                                store.upgradeTelemetry.bytesSentOffset,
-                                store.upgradeTelemetry.totalBytes))
-                        .font(.caption.monospacedDigit())
+                    Text(store.speedMode.subtitle)
+                        .font(.caption)
                         .foregroundColor(.secondary)
-                    Spacer()
-                    if let eta = store.upgradeTelemetry.estimatedRemainingSeconds {
-                        Text("剩余约 \(formatSeconds(eta))")
-                            .font(.caption.monospacedDigit())
+                }
+
+                Divider()
+
+                Toggle(isOn: $store.autoThrottleEnabled) {
+                    VStack(alignment: .leading, spacing: 2) {
+                        Text("重传自动平滑降速")
+                            .font(.subheadline.weight(.medium))
+                        Text("遇到丢包重传时自动切至更稳妥档位（推荐开启）")
+                            .font(.caption2)
                             .foregroundColor(.secondary)
                     }
                 }
 
-                HStack(spacing: 12) {
-                    telemetryBadge("实测速率", String(format: "%.2f KB/s", store.upgradeTelemetry.throughputBytesPerSec / 1024.0))
-                    telemetryBadge("重传计数", "\(store.upgradeTelemetry.totalRetransmits)")
-                    telemetryBadge("分段MD5", "\(store.upgradeTelemetry.rangeMD5Requests)")
+                if !store.upgradeTelemetry.autoThrottleNotice.isEmpty {
+                    statusBanner(
+                        icon: "exclamationmark.triangle.fill",
+                        text: store.upgradeTelemetry.autoThrottleNotice,
+                        color: .orange
+                    )
                 }
-            }
-            .padding(.vertical, 4)
-
-            switch store.upgradePhase {
-            case .readyToReboot(let readyVer):
-                Button {
-                    showRebootConfirm = true
-                } label: {
-                    Label("立即升级并重启 HUD (版本 \(readyVer))", systemImage: "bolt.circle.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .tint(.green)
-                .disabled(!store.connectionState.isConnected)
-
-            case .handshaking, .transferring:
-                Button(role: .destructive) {
-                    store.abortFirmwareTransfer()
-                } label: {
-                    Label("中止传输", systemImage: "stop.circle")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.bordered)
-
-            default:
-                Button {
-                    showStartFlashConfirm = true
-                } label: {
-                    Label("开始安全传输固件", systemImage: "arrow.up.circle.fill")
-                        .frame(maxWidth: .infinity)
-                }
-                .buttonStyle(.borderedProminent)
-                .disabled(store.upgradePrecheckBlocker() != nil || store.upgradePhase.isBusy)
             }
         }
     }
 
-    private func telemetryBadge(_ label: String, _ value: String) -> some View {
-        VStack(alignment: .leading, spacing: 2) {
+    // MARK: - 步骤 3：传输进度与控制
+
+    private var transferProgressSection: some View {
+        let progress = store.upgradeTelemetry.progress
+
+        return VStack(alignment: .leading, spacing: 10) {
+            HUDSectionHeader(title: "3. 传输进度与刷写控制")
+
+            HUDCard {
+                // 状态 + 百分比大字
+                HStack(alignment: .firstTextBaseline) {
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(store.upgradePhase.title)
+                            .font(.subheadline.weight(.semibold))
+                        Text(String(format: "%d / %d B", store.upgradeTelemetry.bytesSentOffset, store.upgradeTelemetry.totalBytes))
+                            .font(.caption2.monospacedDigit())
+                            .foregroundColor(.secondary)
+                    }
+                    Spacer()
+                    Text(String(format: "%.1f%%", progress * 100.0))
+                        .font(.title2.weight(.bold).monospacedDigit())
+                        .foregroundColor(progressAccentColor)
+                }
+
+                // 渐变进度条
+                GeometryReader { geo in
+                    ZStack(alignment: .leading) {
+                        Capsule()
+                            .fill(Color(.tertiarySystemFill))
+                        Capsule()
+                            .fill(progressAccentColor)
+                            .frame(width: max(0, geo.size.width * CGFloat(progress)))
+                            .animation(.easeInOut(duration: 0.25), value: progress)
+                    }
+                }
+                .frame(height: 9)
+
+                if let eta = store.upgradeTelemetry.estimatedRemainingSeconds {
+                    HStack {
+                        Spacer()
+                        Label("预计剩余 \(formatSeconds(eta))", systemImage: "timer")
+                            .font(.caption2.monospacedDigit())
+                            .foregroundColor(.secondary)
+                    }
+                }
+
+                // 3 格遥测统计
+                HStack(spacing: 10) {
+                    telemetryTile(
+                        label: "实测速率",
+                        value: String(format: "%.2f KB/s", store.upgradeTelemetry.throughputBytesPerSec / 1024.0)
+                    )
+                    telemetryTile(
+                        label: "重传计数",
+                        value: "\(store.upgradeTelemetry.totalRetransmits)"
+                    )
+                    telemetryTile(
+                        label: "分段校验",
+                        value: "\(store.upgradeTelemetry.rangeMD5Requests)"
+                    )
+                }
+
+                Divider()
+
+                // 主控制按钮
+                switch store.upgradePhase {
+                case .readyToReboot(let readyVer):
+                    Button {
+                        showRebootConfirm = true
+                    } label: {
+                        Label("立即升级并重启 HUD (v\(readyVer))", systemImage: "bolt.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .tint(.green)
+                    .disabled(!store.connectionState.isConnected)
+
+                case .handshaking, .transferring:
+                    Button(role: .destructive) {
+                        store.abortFirmwareTransfer()
+                    } label: {
+                        Label("中止传输", systemImage: "stop.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.bordered)
+
+                default:
+                    Button {
+                        showStartFlashConfirm = true
+                    } label: {
+                        Label("开始安全传输固件", systemImage: "arrow.up.circle.fill")
+                            .font(.subheadline.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                            .padding(.vertical, 12)
+                    }
+                    .buttonStyle(.borderedProminent)
+                    .disabled(store.upgradePrecheckBlocker() != nil || store.upgradePhase.isBusy)
+                }
+            }
+        }
+    }
+
+    private var progressAccentColor: Color {
+        switch store.upgradePhase {
+        case .readyToReboot, .rebootTriggered:
+            return .green
+        case .failed:
+            return .red
+        default:
+            return .accentColor
+        }
+    }
+
+    private func telemetryTile(label: String, value: String) -> some View {
+        VStack(alignment: .leading, spacing: 3) {
             Text(label)
                 .font(.caption2)
                 .foregroundColor(.secondary)
             Text(value)
-                .font(.caption.bold().monospacedDigit())
+                .font(.caption.weight(.bold).monospacedDigit())
+                .foregroundColor(.primary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 5)
+        .padding(.horizontal, 10)
+        .padding(.vertical, 8)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.secondary.opacity(0.1))
-        .cornerRadius(6)
+        .background(Color(.tertiarySystemGroupedBackground))
+        .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
     }
 
     private func formatSeconds(_ totalSec: Int) -> String {
         let m = totalSec / 60
         let s = totalSec % 60
         return m > 0 ? "\(m)分\(s)秒" : "\(s)秒"
-    }
-}
-
-private extension View {
-    @ViewBuilder
-    func dismissKeyboardOnScrollCompat() -> some View {
-        if #available(iOS 16.0, *) {
-            self.scrollDismissesKeyboard(.interactively)
-        } else {
-            self
-        }
     }
 }

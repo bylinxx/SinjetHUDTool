@@ -44,21 +44,6 @@ enum HUDCommands {
         Data([0x03, 0x06, 0x00])
     }
 
-    static func windowControlSetting(frontLeft: Bool, frontRight: Bool, rear: Bool) -> Data {
-        Data([
-            0x03,
-            0x20,
-            frontLeft ? 0x01 : 0x00,
-            frontRight ? 0x01 : 0x00,
-            rear ? 0x01 : 0x00
-        ])
-    }
-
-    static func lockUnlockSetting(unlockOnP: Bool, lockOnD: Bool) -> Data {
-        let flags: UInt8 = (unlockOnP ? 0x10 : 0x00) | (lockOnD ? 0x01 : 0x00)
-        return Data([0x03, 0x21, flags])
-    }
-
     // MARK: - ID 0x04 TPMS
 
     static func tpmsStartPair(tire: TirePosition) -> Data {
@@ -75,36 +60,6 @@ enum HUDCommands {
 
     static func tpmsSetHighTempAlarm(_ value: UInt8) -> Data {
         Data([0x04, 0x03, value])
-    }
-
-    // MARK: - ID 0x05 蓝牙控车
-
-    static func btRemoteControl(action: BTRemoteAction, password8: String) -> Data {
-        let pair = action.commandPair
-        var bytes: [UInt8] = [0x05, pair.0, pair.1]
-        let pwdBytes = Array(password8.utf8)
-        if pwdBytes.count == 8 {
-            bytes.append(contentsOf: pwdBytes)
-        } else {
-            bytes.append(contentsOf: repeatElement(0xFF, count: 8))
-        }
-        return Data(bytes)
-    }
-
-    static func btRemoteVerifyPassword(_ password8: String) -> Data? {
-        let pwdBytes = Array(password8.utf8)
-        guard pwdBytes.count == 8 else { return nil }
-        return Data([0x05, 0xA0] + pwdBytes)
-    }
-
-    static func btRemoteRequestSetPassword() -> Data {
-        Data([0x05, 0xA1, 0x00])
-    }
-
-    static func btRemoteSetNewPassword(_ newPassword8: String) -> Data? {
-        let pwdBytes = Array(newPassword8.utf8)
-        guard pwdBytes.count == 8 else { return nil }
-        return Data([0x05, 0xA2] + pwdBytes)
     }
 
     // MARK: - ID 0x06 昂克赛拉 HUD 专属控制
@@ -132,6 +87,25 @@ enum HUDCommands {
 
     static func mcuErrorMsgAck() -> Data {
         Data([0x06, 0xAC, 0x00])
+    }
+
+    // MARK: - ID 0x08 主题步进切换
+
+    /// 通用步进切主题（兼容全部原厂与其他车型 HUD：next=true -> 下一个，false -> 上一个）
+    static func stepTheme(next: Bool) -> Data {
+        Data([0x08, 0x01, 0x05, next ? 0x01 : 0x00])
+    }
+
+    // MARK: - ID 0x08 / 0x01 / 0x07 自动关闭发动机启停 (i-Stop)
+
+    /// 查询当前「自动关闭发动机启停」开关状态（原厂/其他车型静默忽略）
+    static func queryAutoStartStop() -> Data {
+        Data([0x08, 0x01, 0x07, 0xFF])
+    }
+
+    /// 设置「自动关闭发动机启停」开关（true=开启自动关闭启停，false=关闭）
+    static func setAutoStartStop(enabled: Bool) -> Data {
+        Data([0x08, 0x01, 0x07, enabled ? 0x01 : 0x00])
     }
 
     // MARK: - ID 0x37 / 0x3A 固件查询与新版 `.pak` 刷机
