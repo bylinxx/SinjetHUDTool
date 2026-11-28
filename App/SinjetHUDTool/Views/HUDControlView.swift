@@ -44,7 +44,7 @@ struct HUDControlView: View {
 
     private var axelaOSDSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HUDSectionHeader(title: "OSD 菜单遥控", subtitle: "支持短按切换与长按进入 / 退出菜单")
+            HUDSectionHeader(title: "OSD 菜单遥控")
 
             HUDCard {
                 HStack(spacing: 12) {
@@ -84,15 +84,6 @@ struct HUDControlView: View {
                     .frame(maxWidth: .infinity)
                     .frame(height: 68)
                 }
-
-                HStack(spacing: 6) {
-                    Image(systemName: "hand.tap.fill")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Text("按下实时下发按键状态、抬起自动释放，避免菜单重复触发。")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
             }
         }
     }
@@ -101,15 +92,13 @@ struct HUDControlView: View {
 
     private var hudThemeSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HUDSectionHeader(title: "HUD 主题切换", subtitle: "通过通用指令顺序切换上下套显示主题")
+            HUDSectionHeader(title: "HUD 主题切换")
 
             HUDCard(spacing: 10) {
                 HStack(spacing: 12) {
                     panelActionCard(
                         title: "上一套主题",
-                        subtitle: "向前切换样式",
                         systemImage: "chevron.left.circle.fill",
-                        tint: .secondary,
                         prominent: false
                     ) {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -118,23 +107,12 @@ struct HUDControlView: View {
 
                     panelActionCard(
                         title: "下一套主题",
-                        subtitle: "向后切换样式",
                         systemImage: "chevron.right.circle.fill",
-                        tint: .accentColor,
                         prominent: true
                     ) {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
                         store.stepTheme(next: true)
                     }
-                }
-
-                HStack(spacing: 6) {
-                    Image(systemName: "paintbrush.pointed.fill")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                    Text("使用原厂标准切主题指令（08 01 05），兼容原厂与自制固件。")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
                 }
             }
         }
@@ -144,16 +122,14 @@ struct HUDControlView: View {
 
     private var axelaPanelSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HUDSectionHeader(title: "翻盖成像板控制与标定", subtitle: "电动翻屏测试、实时仰角微调与限位记忆")
+            HUDSectionHeader(title: "翻盖成像板控制与标定")
 
             HUDCard(spacing: 14) {
-                // 1. 电动开合测试双大卡
+                // 1. 电动开合测试双按键（与 OSD 菜单遥控同尺寸）
                 HStack(spacing: 12) {
                     panelActionCard(
                         title: "升起测试",
-                        subtitle: "展开透明成像板",
                         systemImage: "arrow.up.to.line",
-                        tint: .accentColor,
                         prominent: true
                     ) {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -162,9 +138,7 @@ struct HUDControlView: View {
 
                     panelActionCard(
                         title: "收回测试",
-                        subtitle: "闭合归位收纳",
                         systemImage: "arrow.down.to.line",
-                        tint: .secondary,
                         prominent: false
                     ) {
                         UIImpactFeedbackGenerator(style: .light).impactOccurred()
@@ -176,13 +150,8 @@ struct HUDControlView: View {
                 HStack(spacing: 12) {
                     HUDIconBadge(systemImage: "slider.horizontal.3", color: .cyan, size: 34)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("实时仰角微调")
-                            .font(.subheadline.weight(.semibold))
-                        Text("按当前坐姿微调投影高低")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
+                    Text("实时仰角微调")
+                        .font(.subheadline.weight(.semibold))
 
                     Spacer()
 
@@ -219,7 +188,6 @@ struct HUDControlView: View {
                 // 3. 翻盖升起限位标定
                 calibrationControlCard(
                     title: "升起限位标定",
-                    subtitle: "调整着车自动展开后的默认仰角",
                     systemImage: "angle",
                     accent: .blue,
                     draft: $openCaliDraft,
@@ -233,7 +201,6 @@ struct HUDControlView: View {
                 // 4. 翻盖收回限位标定
                 calibrationControlCard(
                     title: "收回限位标定",
-                    subtitle: "调整熄火自动闭合后的终点位置",
                     systemImage: "rectangle.compress.vertical",
                     accent: .indigo,
                     draft: $closeCaliDraft,
@@ -243,49 +210,46 @@ struct HUDControlView: View {
                     hasRange: store.axelaCalibration.hasCloseRange,
                     onApply: { store.sendAxelaCloseCalibration(Int(closeCaliDraft)) }
                 )
-
-                Text("日常使用若开合顺畅、视野居中，无需修改限位标定。")
-                    .font(.caption2)
-                    .foregroundColor(.secondary)
             }
         }
     }
 
     private func panelActionCard(
         title: String,
-        subtitle: String,
         systemImage: String,
-        tint: Color,
         prominent: Bool,
         action: @escaping () -> Void
     ) -> some View {
         let isDisabled = !store.connectionState.isConnected
+        let foregroundColor: Color = isDisabled ? .secondary : (prominent ? .accentColor : .primary)
+        let fillColor: Color = isDisabled
+            ? Color(.tertiarySystemFill)
+            : (prominent ? Color.accentColor.opacity(0.16) : Color(.tertiarySystemGroupedBackground))
+        let borderColor: Color = isDisabled
+            ? .clear
+            : (prominent ? Color.accentColor.opacity(0.35) : Color.primary.opacity(0.08))
+
         return Button(action: action) {
-            VStack(spacing: 6) {
+            VStack(spacing: 5) {
                 Image(systemName: systemImage)
-                    .font(.title3.weight(.semibold))
-                    .foregroundColor(isDisabled ? .secondary : (prominent ? .white : .primary))
+                    .font(.system(size: 18, weight: .semibold))
+                    .foregroundColor(foregroundColor)
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundColor(isDisabled ? .secondary : (prominent ? .white : .primary))
-                Text(subtitle)
-                    .font(.caption2)
-                    .foregroundColor(isDisabled ? .secondary.opacity(0.7) : (prominent ? .white.opacity(0.85) : .secondary))
+                    .font(.caption.weight(.bold))
+                    .foregroundColor(foregroundColor)
+                    .lineLimit(1)
             }
             .frame(maxWidth: .infinity)
-            .padding(.vertical, 14)
+            .frame(height: 68)
             .background(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .fill(
-                        isDisabled
-                            ? AnyShapeStyle(Color(.tertiarySystemFill))
-                            : (prominent ? AnyShapeStyle(HUDDesign.accentGradient) : AnyShapeStyle(Color(.tertiarySystemGroupedBackground)))
-                    )
+                    .fill(fillColor)
             )
             .overlay(
                 RoundedRectangle(cornerRadius: 14, style: .continuous)
-                    .stroke(prominent || isDisabled ? Color.clear : Color.primary.opacity(0.08), lineWidth: 1)
+                    .stroke(borderColor, lineWidth: 1)
             )
+            .opacity(isDisabled ? 0.55 : 1.0)
         }
         .buttonStyle(.plain)
         .disabled(isDisabled)
@@ -293,7 +257,6 @@ struct HUDControlView: View {
 
     private func calibrationControlCard(
         title: String,
-        subtitle: String,
         systemImage: String,
         accent: Color,
         draft: Binding<Double>,
@@ -318,13 +281,8 @@ struct HUDControlView: View {
                     iconFont: .subheadline.weight(.semibold)
                 )
 
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                    Text(subtitle)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
 
                 Spacer()
 
@@ -434,15 +392,10 @@ struct HUDControlView: View {
 
             HUDCard(padding: 14) {
                 HStack(spacing: 12) {
-                    HUDIconBadge(systemImage: "clock.arrow.2.circlepath", color: .blue, size: 38)
+                    HUDIconBadge(systemImage: "clock.arrow.2.circlepath", color: .blue, size: 36)
 
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("同步手机时间")
-                            .font(.subheadline.weight(.semibold))
-                        Text("将当前系统日期与时间精准写入 HUD")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
+                    Text("同步手机时间")
+                        .font(.subheadline.weight(.semibold))
 
                     Spacer()
 

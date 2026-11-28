@@ -150,25 +150,21 @@ struct FirmwareUpgradeView: View {
         let trimmedURL = store.manifestURLString.trimmingCharacters(in: .whitespacesAndNewlines)
 
         return VStack(alignment: .leading, spacing: 10) {
-            HUDSectionHeader(title: "1. 选择固件包 (.pak)", subtitle: "支持从本地文件导入或远程更新清单下载")
+            HUDSectionHeader(title: "1. 选择固件包 (.pak)")
 
             HUDCard {
-                // 主推荐操作：本地导入 .pak
+                // 选项 1：本地导入 .pak
                 Button {
                     isURLFieldFocused = false
                     showFileImporter = true
                 } label: {
                     HStack(spacing: 12) {
-                        HUDIconBadge(systemImage: "folder.badge.plus", color: .accentColor, size: 40)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("从「文件」App 导入本地 .pak 固件")
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundColor(.primary)
-                            Text("自动完成 21 记录完整性、MD5 与型号安全预检")
-                                .font(.caption2)
-                                .foregroundColor(.secondary)
-                        }
-                        Spacer()
+                        HUDIconBadge(systemImage: "folder.badge.plus", color: .accentColor, size: 34)
+                        Text("从「文件」App 导入本地 .pak")
+                            .font(.subheadline.weight(.semibold))
+                            .foregroundColor(.primary)
+                            .lineLimit(1)
+                        Spacer(minLength: 8)
                         Image(systemName: "chevron.right")
                             .font(.caption.weight(.semibold))
                             .foregroundColor(Color(.tertiaryLabel))
@@ -180,57 +176,78 @@ struct FirmwareUpgradeView: View {
                 .buttonStyle(.plain)
                 .disabled(store.upgradePhase.isBusy)
 
-                // 远程清单拉取（可展开）
-                DisclosureGroup(isExpanded: $showRemoteURLInput) {
-                    VStack(alignment: .leading, spacing: 10) {
-                        TextField("输入更新清单 JSON URL (https://...)", text: $store.manifestURLString)
-                            .focused($isURLFieldFocused)
-                            .textInputAutocapitalization(.never)
-                            .disableAutocorrection(true)
-                            .keyboardType(.URL)
-                            .submitLabel(.done)
-                            .onSubmit {
-                                isURLFieldFocused = false
-                            }
-                            .font(.caption.monospaced())
-                            .padding(10)
-                            .background(Color(.tertiarySystemGroupedBackground))
-                            .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
-
-                        HStack(spacing: 10) {
-                            Button("清空") {
-                                isURLFieldFocused = false
-                                store.manifestURLString = ""
-                            }
-                            .font(.caption.weight(.medium))
-                            .buttonStyle(.bordered)
-                            .disabled(trimmedURL.isEmpty || store.upgradePhase.isBusy)
-
-                            Spacer()
-
-                            Button {
-                                isURLFieldFocused = false
-                                Task {
-                                    await store.fetchRemoteManifestAndDownload()
-                                }
-                            } label: {
-                                Label("拉取并预检", systemImage: "arrow.down.circle.fill")
-                                    .font(.caption.weight(.semibold))
-                            }
-                            .buttonStyle(.borderedProminent)
-                            .disabled(store.upgradePhase.isBusy || trimmedURL.isEmpty)
+                // 选项 2：远程清单拉取（与本地导入完全统一尺寸与样式）
+                VStack(alignment: .leading, spacing: 0) {
+                    Button {
+                        withAnimation(.easeInOut(duration: 0.2)) {
+                            showRemoteURLInput.toggle()
                         }
+                    } label: {
+                        HStack(spacing: 12) {
+                            HUDIconBadge(systemImage: "link", color: .indigo, size: 34)
+                            Text("通过远程更新清单 URL 拉取")
+                                .font(.subheadline.weight(.semibold))
+                                .foregroundColor(.primary)
+                                .lineLimit(1)
+                            Spacer(minLength: 8)
+                            Image(systemName: "chevron.right")
+                                .font(.caption.weight(.semibold))
+                                .foregroundColor(Color(.tertiaryLabel))
+                                .rotationEffect(.degrees(showRemoteURLInput ? 90 : 0))
+                        }
+                        .padding(12)
+                        .contentShape(Rectangle())
                     }
-                    .padding(.top, 8)
-                } label: {
-                    HStack(spacing: 10) {
-                        HUDIconBadge(systemImage: "link", color: .indigo, size: 30, iconFont: .caption.weight(.bold))
-                        Text("通过远程更新清单 URL 拉取")
-                            .font(.subheadline.weight(.medium))
-                            .foregroundColor(.primary)
+                    .buttonStyle(.plain)
+
+                    if showRemoteURLInput {
+                        Divider()
+                            .padding(.horizontal, 12)
+
+                        VStack(alignment: .leading, spacing: 10) {
+                            TextField("输入更新清单 JSON URL (https://...)", text: $store.manifestURLString)
+                                .focused($isURLFieldFocused)
+                                .textInputAutocapitalization(.never)
+                                .disableAutocorrection(true)
+                                .keyboardType(.URL)
+                                .submitLabel(.done)
+                                .onSubmit {
+                                    isURLFieldFocused = false
+                                }
+                                .font(.caption.monospaced())
+                                .padding(10)
+                                .background(Color(.secondarySystemGroupedBackground))
+                                .clipShape(RoundedRectangle(cornerRadius: 10, style: .continuous))
+
+                            HStack(spacing: 10) {
+                                Button("清空") {
+                                    isURLFieldFocused = false
+                                    store.manifestURLString = ""
+                                }
+                                .font(.caption.weight(.medium))
+                                .buttonStyle(.bordered)
+                                .disabled(trimmedURL.isEmpty || store.upgradePhase.isBusy)
+
+                                Spacer()
+
+                                Button {
+                                    isURLFieldFocused = false
+                                    Task {
+                                        await store.fetchRemoteManifestAndDownload()
+                                    }
+                                } label: {
+                                    Label("拉取并预检", systemImage: "arrow.down.circle.fill")
+                                        .font(.caption.weight(.semibold))
+                                }
+                                .buttonStyle(.borderedProminent)
+                                .disabled(store.upgradePhase.isBusy || trimmedURL.isEmpty)
+                            }
+                        }
+                        .padding(12)
                     }
                 }
-                .tint(.secondary)
+                .background(Color(.tertiarySystemGroupedBackground))
+                .clipShape(RoundedRectangle(cornerRadius: 12, style: .continuous))
 
                 if let manifest = store.remoteManifest {
                     VStack(alignment: .leading, spacing: 4) {
@@ -318,7 +335,7 @@ struct FirmwareUpgradeView: View {
                 if let blocker {
                     statusBanner(icon: "exclamationmark.triangle.fill", text: blocker, color: .orange)
                 } else {
-                    statusBanner(icon: "checkmark.circle.fill", text: "型号匹配、版本号合规且 21 记录校验全通过，允许安全刷机", color: .green)
+                    statusBanner(icon: "checkmark.circle.fill", text: "固件校验通过，可以开始传输", color: .green)
                 }
             }
         }
@@ -348,30 +365,17 @@ struct FirmwareUpgradeView: View {
             HUDSectionHeader(title: "2. 传输策略与保护")
 
             HUDCard {
-                VStack(alignment: .leading, spacing: 8) {
-                    Picker("刷机速率", selection: $store.speedMode) {
-                        ForEach(TransferSpeedMode.allCases) { mode in
-                            Text(mode.rawValue).tag(mode)
-                        }
+                Picker("刷机速率", selection: $store.speedMode) {
+                    ForEach(TransferSpeedMode.allCases) { mode in
+                        Text(mode.rawValue).tag(mode)
                     }
-                    .pickerStyle(.segmented)
-
-                    Text(store.speedMode.subtitle)
-                        .font(.caption)
-                        .foregroundColor(.secondary)
                 }
+                .pickerStyle(.segmented)
 
                 Divider()
 
-                Toggle(isOn: $store.autoThrottleEnabled) {
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("重传自动平滑降速")
-                            .font(.subheadline.weight(.medium))
-                        Text("遇到丢包重传时自动切至更稳妥档位（推荐开启）")
-                            .font(.caption2)
-                            .foregroundColor(.secondary)
-                    }
-                }
+                Toggle("重传自动降速", isOn: $store.autoThrottleEnabled)
+                    .font(.subheadline.weight(.medium))
 
                 if !store.upgradeTelemetry.autoThrottleNotice.isEmpty {
                     statusBanner(

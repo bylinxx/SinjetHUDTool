@@ -215,7 +215,8 @@ struct CarDataView: View {
         HUDCard(
             borderColor: alert ? Color.red.opacity(0.65) : nil,
             borderWidth: alert ? 1.5 : 1,
-            padding: 14
+            padding: 14,
+            spacing: 12
         ) {
             HStack {
                 HUDIconBadge(systemImage: icon, color: alert ? .red : tint, size: 30, iconFont: .caption.weight(.bold))
@@ -227,18 +228,26 @@ struct CarDataView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 2) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text(title)
                     .font(.caption)
                     .foregroundColor(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
                 HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(value)
                         .font(.title2.weight(.bold).monospacedDigit())
                         .foregroundColor(alert ? .red : .primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     Text(unit)
                         .font(.caption2.weight(.medium))
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
+                Color.clear
+                    .frame(height: 5)
+                    .padding(.top, 2)
             }
         }
     }
@@ -250,7 +259,8 @@ struct CarDataView: View {
 
         return HUDCard(
             borderColor: isLowFuel ? Color.orange.opacity(0.55) : nil,
-            padding: 14
+            padding: 14,
+            spacing: 12
         ) {
             HStack {
                 HUDIconBadge(systemImage: "fuelpump.fill", color: accent, size: 30, iconFont: .caption.weight(.bold))
@@ -262,17 +272,22 @@ struct CarDataView: View {
                 }
             }
 
-            VStack(alignment: .leading, spacing: 6) {
+            VStack(alignment: .leading, spacing: 4) {
                 Text("剩余油量")
                     .font(.caption)
                     .foregroundColor(.secondary)
-                HStack(alignment: .firstTextBaseline, spacing: 3) {
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                HStack(alignment: .firstTextBaseline, spacing: 4) {
                     Text(percent.map { "\($0)" } ?? "--")
                         .font(.title2.weight(.bold).monospacedDigit())
                         .foregroundColor(isLowFuel && percent != nil ? .orange : .primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.8)
                     Text("%")
                         .font(.caption2.weight(.medium))
                         .foregroundColor(.secondary)
+                        .lineLimit(1)
                 }
 
                 GeometryReader { geo in
@@ -285,6 +300,7 @@ struct CarDataView: View {
                     }
                 }
                 .frame(height: 5)
+                .padding(.top, 2)
             }
         }
     }
@@ -294,7 +310,21 @@ struct CarDataView: View {
     private var autoStartStopSection: some View {
         VStack(alignment: .leading, spacing: 10) {
             HUDSectionHeader(title: "车辆功能设置") {
-                HUDStatusPill(text: autoStartStopBadgeText, color: autoStartStopStatusColor)
+                HStack(spacing: 8) {
+                    if store.autoStartStop.capability == .probing || store.autoStartStop.isPending {
+                        ProgressView()
+                            .scaleEffect(0.75)
+                    } else if store.connectionState.isConnected {
+                        Button("同步") {
+                            store.queryAutoStartStop()
+                        }
+                        .font(.caption.weight(.semibold))
+                        .buttonStyle(.bordered)
+                        .controlSize(.mini)
+                        .disabled(store.upgradePhase.isBusy)
+                    }
+                    HUDStatusPill(text: autoStartStopBadgeText, color: autoStartStopStatusColor)
+                }
             }
 
             HUDCard {
@@ -320,30 +350,6 @@ struct CarDataView: View {
                         }
                     }
                     .disabled(!store.connectionState.isConnected || !store.autoStartStop.isSynced || store.upgradePhase.isBusy)
-                }
-
-                Divider()
-
-                HStack(alignment: .center, spacing: 10) {
-                    Text("设置保存在 HUD 本机，每次点火着车约 3.5 秒后自动关闭 i-Stop，无需连接手机。")
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Spacer(minLength: 6)
-
-                    if store.autoStartStop.capability == .probing || store.autoStartStop.isPending {
-                        ProgressView()
-                            .scaleEffect(0.8)
-                    } else {
-                        Button("同步") {
-                            store.queryAutoStartStop()
-                        }
-                        .font(.caption.weight(.semibold))
-                        .buttonStyle(.bordered)
-                        .controlSize(.small)
-                        .disabled(!store.connectionState.isConnected || store.upgradePhase.isBusy)
-                    }
                 }
             }
         }
@@ -439,7 +445,7 @@ struct CarDataView: View {
 
     private var tpmsSection: some View {
         VStack(alignment: .leading, spacing: 10) {
-            HUDSectionHeader(title: "TPMS 胎压监测", subtitle: "四轮实时气压与胎温")
+            HUDSectionHeader(title: "TPMS 胎压监测")
 
             HUDCard {
                 LazyVGrid(columns: twoColumns, spacing: 10) {
@@ -465,12 +471,8 @@ struct CarDataView: View {
                 if store.connectionState.isConnected {
                     Divider()
 
-                    DisclosureGroup("报警阈值设置（实验性）", isExpanded: $showTPMSThresholdSettings) {
+                    DisclosureGroup("报警阈值设置", isExpanded: $showTPMSThresholdSettings) {
                         VStack(alignment: .leading, spacing: 12) {
-                            Text("原厂 App 未开放此设置界面，实车修改前请先核对下方 HUD 回读的原始字节。")
-                                .font(.caption2)
-                                .foregroundColor(.orange)
-
                             tpmsThresholdRow(
                                 title: "高压阈值",
                                 readback: store.tpms.highPressureAlarm,
@@ -606,18 +608,6 @@ struct CarDataView: View {
             HUDSectionHeader(title: "车况快捷体检")
 
             HUDCard {
-                HStack(spacing: 12) {
-                    HUDIconBadge(systemImage: "stethoscope", color: .teal, size: 38)
-                    VStack(alignment: .leading, spacing: 2) {
-                        Text("一键 OBD 车况汇总")
-                            .font(.subheadline.weight(.semibold))
-                        Text("读取故障数、电压、节气门、水温与三元催化温度")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                    }
-                    Spacer()
-                }
-
                 Button {
                     store.startQuickCheck()
                 } label: {

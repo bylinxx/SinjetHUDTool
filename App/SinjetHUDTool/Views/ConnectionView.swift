@@ -43,7 +43,7 @@ struct ConnectionView: View {
                 .offset(x: 45, y: -55)
 
             VStack(alignment: .leading, spacing: 16) {
-                HStack(alignment: .top, spacing: 14) {
+                HStack(alignment: .center, spacing: 14) {
                     // 状态光环图标
                     ZStack {
                         Circle()
@@ -64,16 +64,17 @@ struct ConnectionView: View {
                     }
 
                     VStack(alignment: .leading, spacing: 4) {
-                        HStack(spacing: 8) {
-                            Text(store.connectionState.isConnected ? store.connectedDeviceName : store.connectionState.rawValue)
-                                .font(.title3.weight(.bold))
-                                .foregroundColor(.white)
-                                .lineLimit(1)
+                        Text(store.connectionState.isConnected ? store.connectedDeviceName : store.connectionState.rawValue)
+                            .font(.title3.weight(.bold))
+                            .foregroundColor(.white)
+                            .lineLimit(1)
+
+                        if let subtitle = statusSubtitle {
+                            Text(subtitle)
+                                .font(.caption)
+                                .foregroundColor(.white.opacity(0.75))
+                                .fixedSize(horizontal: false, vertical: true)
                         }
-                        Text(statusSubtitle)
-                            .font(.caption)
-                            .foregroundColor(.white.opacity(0.75))
-                            .fixedSize(horizontal: false, vertical: true)
                     }
 
                     Spacer(minLength: 4)
@@ -203,12 +204,14 @@ struct ConnectionView: View {
                                 .font(.title3)
                                 .foregroundColor(.accentColor)
                         }
-                        Text(store.connectionState == .scanning ? "正在搜索附近信界 HUD..." : "尚未发现 HUD 设备")
+                        Text(store.connectionState == .scanning ? "正在搜索附近 HUD..." : "尚未发现 HUD 设备")
                             .font(.subheadline.weight(.semibold))
-                        Text(store.connectionState == .scanning ? "请确保车辆已通电且 HUD 处于开启状态" : "点击上方「搜索附近 HUD」，连接成功后自动停止扫描省电")
-                            .font(.caption)
-                            .foregroundColor(.secondary)
-                            .multilineTextAlignment(.center)
+                        if store.connectionState == .scanning {
+                            Text("请确保车辆已通电且 HUD 已开启")
+                                .font(.caption)
+                                .foregroundColor(.secondary)
+                                .multilineTextAlignment(.center)
+                        }
                     }
                     .frame(maxWidth: .infinity)
                     .padding(.vertical, 8)
@@ -283,7 +286,6 @@ struct ConnectionView: View {
             HStack(spacing: 12) {
                 quickActionTile(
                     title: "同步手机时间",
-                    subtitle: "校准 HUD 时钟",
                     icon: "clock.arrow.2.circlepath",
                     color: .blue
                 ) {
@@ -292,7 +294,6 @@ struct ConnectionView: View {
 
                 quickActionTile(
                     title: "刷新设备信息",
-                    subtitle: "读取版本与 UUID",
                     icon: "arrow.clockwise",
                     color: .indigo
                 ) {
@@ -304,13 +305,8 @@ struct ConnectionView: View {
                 Toggle(isOn: $store.keepScreenAwake) {
                     HStack(spacing: 12) {
                         HUDIconBadge(systemImage: "sun.max.fill", color: .orange, size: 34)
-                        VStack(alignment: .leading, spacing: 2) {
-                            Text("保持屏幕常亮")
-                                .font(.subheadline.weight(.semibold))
-                            Text("行车或刷机时防止自动锁屏断开")
-                                .font(.caption)
-                                .foregroundColor(.secondary)
-                        }
+                        Text("保持屏幕常亮")
+                            .font(.subheadline.weight(.semibold))
                     }
                 }
             }
@@ -319,7 +315,6 @@ struct ConnectionView: View {
 
     private func quickActionTile(
         title: String,
-        subtitle: String,
         icon: String,
         color: Color,
         action: @escaping () -> Void
@@ -327,14 +322,9 @@ struct ConnectionView: View {
         Button(action: action) {
             VStack(alignment: .leading, spacing: 10) {
                 HUDIconBadge(systemImage: icon, color: color, size: 36)
-                VStack(alignment: .leading, spacing: 2) {
-                    Text(title)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundColor(.primary)
-                    Text(subtitle)
-                        .font(.caption2)
-                        .foregroundColor(.secondary)
-                }
+                Text(title)
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundColor(.primary)
             }
             .padding(14)
             .frame(maxWidth: .infinity, alignment: .leading)
@@ -471,6 +461,7 @@ struct ConnectionView: View {
 
                         Toggle("记录常规帧日志", isOn: $store.enableRawProtocolLog)
                             .font(.subheadline)
+                            .tint(.green)
 
                         if store.logs.isEmpty {
                             Text("暂无通信日志")
@@ -520,7 +511,7 @@ struct ConnectionView: View {
                             Text("原始通信帧记录")
                                 .font(.subheadline.weight(.semibold))
                                 .foregroundColor(.primary)
-                            Text("已缓存 \(store.logs.count) 条 · 点击展开查看 TX/RX 详情")
+                            Text("\(store.logs.count) 条记录")
                                 .font(.caption2)
                                 .foregroundColor(.secondary)
                         }
@@ -543,16 +534,14 @@ struct ConnectionView: View {
         }
     }
 
-    private var statusSubtitle: String {
+    private var statusSubtitle: String? {
         switch store.connectionState {
-        case .ready:
-            return "低功耗蓝牙链路运行中 · 零后台定位与语音耗电"
         case .poweredOff:
-            return "请在系统设置中打开蓝牙后再试"
+            return "请在系统设置中打开蓝牙"
         case .unauthorized:
-            return "请在系统设置中授予本应用蓝牙权限"
+            return "请在系统设置中授予蓝牙权限"
         default:
-            return "原生 CoreBluetooth 直连，安全轻量化车机伴侣"
+            return nil
         }
     }
 
